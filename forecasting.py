@@ -6,7 +6,6 @@ def predict_sales(df):
 
     df = df.copy()
 
-    # Clean column names
     df.columns = (
         df.columns
         .str.strip()
@@ -14,7 +13,7 @@ def predict_sales(df):
     )
 
 
-    # Convert day-wise sales into daily totals
+    # Combine all dishes into daily total sales
 
     daily_sales = (
         df.groupby("day")["sales"]
@@ -23,15 +22,11 @@ def predict_sales(df):
     )
 
 
-    # Prophet needs:
-    # ds = date
-    # y = value
-
+    # Create dates
 
     start_date = pd.Timestamp("2025-01-01")
 
-
-    daily_sales["ds"] = (
+    daily_sales["date"] = (
         start_date +
         pd.to_timedelta(
             daily_sales["day"] - 1,
@@ -40,72 +35,75 @@ def predict_sales(df):
     )
 
 
-    prophet_data = daily_sales[
-        ["ds","sales"]
+    prophet_df = daily_sales[
+        ["date", "sales"]
     ]
 
 
-    prophet_data.columns = [
+    prophet_df.columns = [
         "ds",
         "y"
     ]
 
 
-    # Create model
+    # Prophet model
 
     model = Prophet(
-
-        yearly_seasonality=True,
-
         weekly_seasonality=True,
-
+        yearly_seasonality=False,
         daily_seasonality=False,
-
-        changepoint_prior_scale=0.15
-
+        changepoint_prior_scale=0.2
     )
 
 
-    model.fit(prophet_data)
+    model.fit(prophet_df)
 
 
+    # Predict next 30 days
 
-    # Future 30 days
-
-    future = model.make_future_dataframe(
+    future_dates = model.make_future_dataframe(
         periods=30,
         freq="D"
     )
 
 
-    forecast = model.predict(future)
+    forecast = model.predict(
+        future_dates
+    )
 
 
-
-    # Only future predictions
-
-    result = forecast[
-        forecast["ds"] >
-        prophet_data["ds"].max()
+    prediction = forecast[
+        forecast["ds"] > prophet_df["ds"].max()
     ][
-        [
-            "ds",
-            "yhat"
-        ]
+        ["ds", "yhat"]
     ]
 
 
-    result.columns = [
+    prediction.columns = [
         "date",
         "predicted_sales"
     ]
 
 
-    result["predicted_sales"] = (
-        result["predicted_sales"]
+    prediction["predicted_sales"] = (
+        prediction["predicted_sales"]
         .round()
         .astype(int)
     )
 
 
-    return result
+    # Keep compatibility with old app.py
+
+    prediction["day"] = range(
+        int(df["day"].max()) + 1,
+        int(df["day"].max()) + 31
+    )
+
+
+    return prediction[
+        [
+            "day",
+            "predicted_sales",
+            "date"
+        ]
+    ]
