@@ -1,11 +1,12 @@
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
+from prophet import Prophet
 
 
 def predict_sales(df):
 
     df = df.copy()
 
+    # Clean column names
     df.columns = (
         df.columns
         .str.strip()
@@ -13,86 +14,98 @@ def predict_sales(df):
     )
 
 
-    # Total daily sales
-    daily = (
+    # Convert day-wise sales into daily totals
+
+    daily_sales = (
         df.groupby("day")["sales"]
         .sum()
         .reset_index()
     )
 
 
-    # Add useful features
-
-    daily["day_of_week"] = (
-        daily["day"] % 7
-    )
+    # Prophet needs:
+    # ds = date
+    # y = value
 
 
-    daily["weekend"] = (
-        daily["day_of_week"]
-        .isin([5,6])
-        .astype(int)
-    )
+    start_date = pd.Timestamp("2025-01-01")
 
 
-    X = daily[
-        [
-            "day",
-            "day_of_week",
-            "weekend"
-        ]
-    ]
-
-    y = daily["sales"]
-
-
-    model = RandomForestRegressor(
-        n_estimators=100,
-        random_state=42
-    )
-
-
-    model.fit(X,y)
-
-
-    last_day = int(
-        daily["day"].max()
-    )
-
-
-    future = pd.DataFrame(
-        {
-            "day":range(
-                last_day+1,
-                last_day+8
-            )
-        }
-    )
-
-
-    future["day_of_week"] = (
-        future["day"] % 7
-    )
-
-
-    future["weekend"] = (
-        future["day_of_week"]
-        .isin([5,6])
-        .astype(int)
-    )
-
-
-    future["predicted_sales"] = (
-        model.predict(
-            future[
-                [
-                    "day",
-                    "day_of_week",
-                    "weekend"
-                ]
-            ]
+    daily_sales["ds"] = (
+        start_date +
+        pd.to_timedelta(
+            daily_sales["day"] - 1,
+            unit="D"
         )
     )
 
 
-    return future
+    prophet_data = daily_sales[
+        ["ds","sales"]
+    ]
+
+
+    prophet_data.columns = [
+        "ds",
+        "y"
+    ]
+
+
+    # Create model
+
+    model = Prophet(
+
+        yearly_seasonality=True,
+
+        weekly_seasonality=True,
+
+        daily_seasonality=False,
+
+        changepoint_prior_scale=0.15
+
+    )
+
+
+    model.fit(prophet_data)
+
+
+
+    # Future 30 days
+
+    future = model.make_future_dataframe(
+        periods=30,
+        freq="D"
+    )
+
+
+    forecast = model.predict(future)
+
+
+
+    # Only future predictions
+
+    result = forecast[
+        forecast["ds"] >
+        prophet_data["ds"].max()
+    ][
+        [
+            "ds",
+            "yhat"
+        ]
+    ]
+
+
+    result.columns = [
+        "date",
+        "predicted_sales"
+    ]
+
+
+    result["predicted_sales"] = (
+        result["predicted_sales"]
+        .round()
+        .astype(int)
+    )
+
+
+    return result
