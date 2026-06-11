@@ -1,7 +1,8 @@
 streamlit
 pandas
 numpy
-matplotlib
-scikit-learn
-streamlit-authenticator
 plotly
+scikit-learn
+prophet
+cmdstanpy
+streamlit-authenticator
