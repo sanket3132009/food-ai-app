@@ -1,12 +1,17 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import random
 
 from auth import login, logout
 from forecasting import predict_sales
 from recommendations import get_recommendations
 from config import APP_NAME
 
+
+# -------------------------
+# Page Configuration
+# -------------------------
 
 st.set_page_config(
     page_title=APP_NAME,
@@ -16,87 +21,151 @@ st.set_page_config(
 
 
 # -------------------------
-# Pastel Theme
+# Random Pastel Background
 # -------------------------
 
+if "bg_color" not in st.session_state:
+
+    st.session_state.bg_color = random.choice(
+        [
+            "#FFF1F2",
+            "#FFF7E6",
+            "#EFFFF7",
+            "#EEF5FF",
+            "#F8F0FF",
+            "#FFFBEA",
+            "#F0FFF4"
+        ]
+    )
+
+
+bg = st.session_state.bg_color
+
+
 st.markdown(
-"""
+f"""
 <style>
 
-body {
-    background-color: #FFF8F0;
-}
+.stApp {{
 
-.stApp {
-    background-color: #FFF8F0;
-}
+background-color:{bg};
 
+background-image:
 
-/* Main title */
+url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E
 
-h1 {
-    color: #5B5FEF;
-    font-family: Arial;
-    font-weight: 800;
-}
+%3Cg fill='%23888888' fill-opacity='0.13'%3E
 
+%3Ctext x='20' y='50' font-size='45'%3E🍕%3C/text%3E
 
-/* Headers */
+%3Ctext x='150' y='70' font-size='45'%3E🍔%3C/text%3E
 
-h2, h3 {
-    color: #FF7A8A;
-}
+%3Ctext x='60' y='170' font-size='45'%3E🍜%3C/text%3E
 
+%3Ctext x='210' y='220' font-size='45'%3E🥗%3C/text%3E
 
-/* Sidebar */
+%3Ctext x='180' y='150' font-size='45'%3E🍩%3C/text%3E
 
-section[data-testid="stSidebar"] {
-    background-color: #E8F8F5;
-}
+%3Ctext x='20' y='260' font-size='45'%3E🍟%3C/text%3E
 
+%3C/g%3E
 
-/* Buttons */
+%3C/svg%3E");
 
-.stButton button {
+background-size:300px 300px;
 
-    background-color: #7ED6A5;
-    color: white;
-
-    border-radius: 20px;
-    border: none;
-
-    font-weight: bold;
-
-    padding: 10px 25px;
-}
+}}
 
 
-.stButton button:hover {
 
-    background-color: #5CC98B;
+h1 {{
 
-}
+color:#5B5FEF;
+
+font-weight:900;
+
+}}
 
 
-/* Cards */
 
-div[data-testid="metric-container"] {
+h2 {{
 
-    background-color: #FFFFFF;
+color:#FF6B81;
 
-    border-radius: 20px;
+font-weight:800;
 
-    padding: 15px;
+}}
 
-    box-shadow: 0px 4px 12px #dddddd;
 
-}
+
+h3 {{
+
+color:#FF9F43;
+
+}}
+
+
+
+section[data-testid="stSidebar"] {{
+
+background-color:#E8FFF6;
+
+}}
+
+
+
+.stButton button {{
+
+background-color:#7ED6A5;
+
+color:white;
+
+border-radius:25px;
+
+border:none;
+
+padding:10px 25px;
+
+font-weight:bold;
+
+}}
+
+
+
+.stButton button:hover {{
+
+background-color:#55C88A;
+
+}}
+
+
+
+div[data-testid="metric-container"] {{
+
+background:white;
+
+padding:20px;
+
+border-radius:20px;
+
+box-shadow:0px 5px 15px #cccccc;
+
+}}
+
+
+
+.stDataFrame {{
+
+border-radius:20px;
+
+}}
 
 
 </style>
 """,
 unsafe_allow_html=True
 )
+
 
 
 # -------------------------
@@ -110,6 +179,7 @@ if not login():
 logout()
 
 
+
 # -------------------------
 # Title
 # -------------------------
@@ -118,14 +188,24 @@ st.title("🍽️ Food AI Assistant")
 
 st.markdown(
 """
-### Smart demand prediction for restaurants
-Predict sales • Reduce waste • Improve planning 🚀
+## Smart restaurant demand prediction
+
+✨ Predict sales  
+✨ Find popular dishes  
+✨ Reduce food waste  
+✨ Plan cooking smarter
+
 """
 )
 
 
+
+# -------------------------
+# Navigation
+# -------------------------
+
 menu = st.sidebar.radio(
-    "🌈 Menu",
+    "🌈 Navigation",
     [
         "Upload Data",
         "Predict Sales",
@@ -135,21 +215,24 @@ menu = st.sidebar.radio(
 )
 
 
+
 if "data" not in st.session_state:
+
     st.session_state.data = None
 
 
 
 # -------------------------
-# Upload
+# Upload Data
 # -------------------------
 
 if menu == "Upload Data":
 
-    st.header("📂 Upload Restaurant Data")
+    st.header("📂 Upload Restaurant Sales Data")
+
 
     file = st.file_uploader(
-        "Choose CSV file",
+        "Upload CSV file",
         type=["csv"]
     )
 
@@ -186,31 +269,30 @@ if menu == "Upload Data":
 
 elif menu == "Predict Sales":
 
-
-    st.header("📈 Future Demand Prediction")
+    st.header("📈 Future Sales Prediction")
 
 
     if st.session_state.data is None:
 
         st.warning(
-            "Upload data first"
+            "Please upload data first"
         )
 
-    else:
 
+    else:
 
         future = predict_sales(
             st.session_state.data
         )
 
 
-        col1, col2 = st.columns(2)
+        col1,col2,col3 = st.columns(3)
 
 
         with col1:
 
             st.metric(
-                "Predicted Days",
+                "Forecast Days",
                 len(future)
             )
 
@@ -220,11 +302,19 @@ elif menu == "Predict Sales":
             st.metric(
                 "Average Demand",
                 int(
-                    future["predicted_sales"]
-                    .mean()
+                    future["predicted_sales"].mean()
                 )
             )
 
+
+        with col3:
+
+            st.metric(
+                "Maximum Demand",
+                int(
+                    future["predicted_sales"].max()
+                )
+            )
 
 
         st.dataframe(
@@ -233,18 +323,31 @@ elif menu == "Predict Sales":
         )
 
 
-        fig = px.line(
+        graph = px.line(
             future,
             x="day",
             y="predicted_sales",
             markers=True,
-            title="Upcoming Sales"
+            title="Upcoming Demand"
         )
 
 
         st.plotly_chart(
-            fig,
+            graph,
             use_container_width=True
+        )
+
+
+        csv = future.to_csv(
+            index=False
+        )
+
+
+        st.download_button(
+            "⬇ Download Forecast",
+            csv,
+            "forecast.csv",
+            "text/csv"
         )
 
 
@@ -255,25 +358,23 @@ elif menu == "Predict Sales":
 
 elif menu == "Dish Insights":
 
-
-    st.header(
-        "🥘 Dish Performance"
-    )
+    st.header("🥘 Dish Performance")
 
 
     if st.session_state.data is None:
 
         st.warning(
-            "Upload data first"
+            "Please upload data first"
         )
 
-    else:
 
+    else:
 
         df = st.session_state.data
 
 
         dish_sales = (
+
             df.groupby("dish")["sales"]
             .sum()
             .reset_index()
@@ -281,6 +382,7 @@ elif menu == "Dish Insights":
                 "sales",
                 ascending=False
             )
+
         )
 
 
@@ -290,42 +392,38 @@ elif menu == "Dish Insights":
         )
 
 
-        fig = px.bar(
+        chart = px.bar(
             dish_sales,
             x="dish",
             y="sales",
-            title="Most Loved Dishes"
+            title="Most Popular Dishes"
         )
 
 
         st.plotly_chart(
-            fig,
+            chart,
             use_container_width=True
         )
 
 
 
 # -------------------------
-# Recommendations
+# AI Recommendations
 # -------------------------
 
 elif menu == "AI Recommendations":
 
-
-    st.header(
-        "💡 Smart Suggestions"
-    )
+    st.header("💡 AI Waste Reduction")
 
 
     if st.session_state.data is None:
 
         st.warning(
-            "Upload data first"
+            "Please upload data first"
         )
 
 
     else:
-
 
         result = get_recommendations(
             st.session_state.data
@@ -333,15 +431,20 @@ elif menu == "AI Recommendations":
 
 
         st.success(
-            f"⭐ Prepare more: {result['top_dish']}"
+            f"⭐ Increase preparation of: {result['top_dish']}"
         )
 
 
         st.warning(
-            f"⚠ Reduce production: {result['low_dish']}"
+            f"⚠ Reduce production of: {result['low_dish']}"
         )
 
 
         st.info(
-            "AI tip: Cook in smaller batches to reduce wastage."
+            """
+            AI Tip:
+            
+            Use predicted demand to prepare food in smaller batches
+            and reduce unnecessary wastage.
+            """
         )
